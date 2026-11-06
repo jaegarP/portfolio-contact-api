@@ -1,0 +1,21 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+
+    "AllowedOrigins": "http://localhost:5500,http://127.0.0.1:5500,http://localhost:5510",
+    "MaxMessagesPerHour": "5",
+    "IpHashSalt": "change-me-to-any-random-text",
+
+    "MessagesStorageConnectionString": "UseDevelopmentStorage=true",
+    "MessagesTableName": "ContactMessages",
+
+    "CommunicationServicesConnectionString": "",
+    "SenderEmail": "DoNotReply@<your-domain>.azurecomm.net",
+    "NotifyEmail": "you@example.com"
+  },
+  "Host": {
+    "CORS": "http://localhost:5500,http://127.0.0.1:5500,http://localhost:5510"
+  }
+}

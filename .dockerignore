@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/local.settings.json
+**/*.user
+tests/
+infra/
+.git/
