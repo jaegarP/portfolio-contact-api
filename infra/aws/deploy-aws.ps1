@@ -21,18 +21,18 @@ param(
   [string] $AllowedOrigins = "https://jaegarp.github.io"
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"   # native tools report via exit codes, checked explicitly below
 function Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }
-function Aws { $out = & aws @args; if ($LASTEXITCODE -ne 0) { throw "aws $($args -join ' ') failed" }; $out }
+function Invoke-Aws { $out = & aws.exe @args; if ($LASTEXITCODE -ne 0) { throw "aws $($args -join ' ') failed" }; $out }
 
 Step "Checking AWS sign-in"
-$identity = Aws sts get-caller-identity --output json | ConvertFrom-Json
+$identity = Invoke-Aws sts get-caller-identity --output json | ConvertFrom-Json
 Write-Host "Account $($identity.Account) as $($identity.Arn)"
 
 Step "Amazon SES: verifying $NotifyEmail (region $Region)"
 $status = aws sesv2 get-email-identity --email-identity $NotifyEmail --region $Region --query VerificationStatus --output text 2>$null
 if ($LASTEXITCODE -ne 0) {
-  Aws sesv2 create-email-identity --email-identity $NotifyEmail --region $Region | Out-Null
+  Invoke-Aws sesv2 create-email-identity --email-identity $NotifyEmail --region $Region | Out-Null
   Write-Host "A verification email has been sent to $NotifyEmail." -ForegroundColor Yellow
   Write-Host "Click the link in it, then run this script again." -ForegroundColor Yellow
   exit 0
@@ -61,7 +61,7 @@ try {
 }
 finally { Pop-Location }
 
-$url = Aws cloudformation describe-stacks --stack-name $StackName --region $Region `
+$url = Invoke-Aws cloudformation describe-stacks --stack-name $StackName --region $Region `
   --query "Stacks[0].Outputs[?OutputKey=='ContactApiUrl'].OutputValue" --output text
 Write-Host "`nDone." -ForegroundColor Green
 Write-Host "AWS API endpoint: $url"
