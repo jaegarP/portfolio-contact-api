@@ -483,3 +483,7 @@ $RECYCLE.BIN/
 
 # Local secrets
 local.settings.json
+
+# AWS SAM build output
+.aws-sam/
+samconfig.toml

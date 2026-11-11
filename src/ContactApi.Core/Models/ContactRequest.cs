@@ -1,4 +1,4 @@
-namespace ContactApi.Models;
+namespace ContactApi.Core.Models;
 
 /// <summary>What the website's contact form sends (JSON body).</summary>
 public sealed record ContactRequest

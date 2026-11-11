@@ -1,15 +1,9 @@
 using Azure.Data.Tables;
-using ContactApi.Models;
+using ContactApi.Core;
+using ContactApi.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace ContactApi.Services;
-
-/// <summary>Saves submissions and answers "how many has this visitor sent recently?" (rate limiting).</summary>
-public interface IMessageStore
-{
-    Task<int> CountRecentAsync(string ipHash, TimeSpan window, CancellationToken ct);
-    Task<string> SaveAsync(ContactSubmission submission, string ipHash, string? userAgent, CancellationToken ct);
-}
 
 /// <summary>Azure Table Storage implementation: one row per message in the "ContactMessages" table.</summary>
 public sealed class TableMessageStore(TableClient table, ILogger<TableMessageStore> logger) : IMessageStore
@@ -52,17 +46,5 @@ public sealed class TableMessageStore(TableClient table, ILogger<TableMessageSto
         await table.AddEntityAsync(entity, ct);
         logger.LogInformation("Stored contact message {RowKey}", rowKey);
         return rowKey;
-    }
-}
-
-/// <summary>Used when no storage is configured (e.g. quick local runs): stores nothing, never rate-limits.</summary>
-public sealed class NullMessageStore(ILogger<NullMessageStore> logger) : IMessageStore
-{
-    public Task<int> CountRecentAsync(string ipHash, TimeSpan window, CancellationToken ct) => Task.FromResult(0);
-
-    public Task<string> SaveAsync(ContactSubmission s, string ipHash, string? userAgent, CancellationToken ct)
-    {
-        logger.LogWarning("MessagesStorageConnectionString not set: message from {Name} was not stored.", s.Name);
-        return Task.FromResult("not-stored");
     }
 }

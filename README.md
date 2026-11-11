@@ -1,89 +1,101 @@
-# Portfolio Contact API
+# Portfolio Contact API — multi-cloud (Azure + AWS)
 
-Serverless backend for the contact form on **[jaegarp.github.io](https://jaegarp.github.io)** — a C# **Azure Functions** app (.NET 10, isolated worker) that validates enquiries, blocks spam, stores every message in **Azure Table Storage** and emails it to me through **Azure Communication Services**.
+Serverless backend for the contact form on **[jaegarp.github.io](https://jaegarp.github.io)**, written once in C# (.NET 10) and deployable to **both Microsoft Azure and Amazon Web Services**. The website tries Azure first, fails over to AWS, and as a last resort opens the visitor's email app — so an enquiry gets through even during a cloud outage.
 
 ```mermaid
 flowchart LR
-    A[Visitor<br/>jaegarp.github.io] -- "POST /api/contact (JSON)" --> B[Azure Function<br/>.NET 10 · Flex Consumption]
-    B -- "1 · validate, honeypot,<br/>rate-limit (hashed IP)" --> B
-    B -- "2 · store" --> C[(Azure Table Storage<br/>ContactMessages)]
-    B -- "3 · send" --> D[Azure Communication<br/>Services Email]
-    D --> E[My inbox<br/>Reply-To = visitor]
-    B -. telemetry .-> F[Application Insights]
+    A[Visitor<br/>jaegarp.github.io] -- "1st choice" --> AZ
+    A -- "if Azure is down" --> AW
+    A -. "if both are down" .-> M[Visitor's email app]
+
+    subgraph AZ[Microsoft Azure]
+      F[Azure Functions] --> T[(Table Storage)]
+      F --> E1[Communication Services Email]
+    end
+    subgraph AW[Amazon Web Services]
+      L[AWS Lambda<br/>Function URL] --> D[(DynamoDB)]
+      L --> E2[Amazon SES]
+    end
+    E1 --> I[My inbox]
+    E2 --> I
 ```
+
+## Design
+
+All business logic lives in one cloud-neutral library; each cloud only supplies a thin host plus its own database and email adapters:
+
+| | Shared — `ContactApi.Core` | Azure — `ContactApi` | AWS — `ContactApi.Aws` |
+|---|---|---|---|
+| Request flow, validation, spam & rate limiting | `ContactService`, `ContactValidator` | | |
+| HTTP host | | Azure Functions (isolated worker) | ASP.NET Core minimal API on Lambda |
+| Database (`IMessageStore`) | | Table Storage | DynamoDB (+ `ByIp` index) |
+| Email (`IEmailNotifier`) | | Communication Services | SES v2 |
+| Infrastructure as code | | `infra/deploy.ps1` (Azure CLI) | `infra/aws/template.yaml` (SAM / CloudFormation) |
+
+Both hosts expose the same contract — `POST /api/contact` with `{ name, email, message }` — so the website can call either.
 
 ## Features
 
-- **Input validation** on the server (name, email, message length) with field-level error messages
+- **Server-side validation** with field-level error messages
 - **Spam protection** — hidden honeypot field + per-visitor rate limit (5 / hour)
-- **Privacy** — visitor IPs are salted and hashed (SHA-256); the raw address is never stored
-- **No lost messages** — every enquiry is stored *before* emailing, so an email outage loses nothing
-- **Origin allow-list + CORS** so only the portfolio site can call it from a browser
-- **Observability** with Application Insights
-- **Infrastructure as code** — one re-runnable script creates every Azure resource ([infra/deploy.ps1](infra/deploy.ps1))
-- **Containerised** — runs anywhere with Docker, with the Azurite storage emulator
-- **Unit tested** with xUnit
+- **Privacy** — visitor IPs are salted and SHA-256 hashed; raw addresses are never stored
+- **No lost messages** — stored *before* emailing; email failures are logged, not fatal
+- **Origin allow-list + CORS**
+- **Multi-cloud failover** handled by the website (Azure → AWS → email app)
+- **Containerised** — both versions run locally in Docker with the official storage emulators
+- **35 unit tests** (xUnit) covering validation and the full request flow with in-memory fakes
 
 ## Project layout
 
 ```
-ContactApi.slnx                    ← open this in Visual Studio
-src/ContactApi/
-  Functions/ContactFunction.cs     ← the HTTP endpoint (POST /api/contact)
-  Services/ContactValidator.cs     ← validation + honeypot (pure logic)
-  Services/MessageStore.cs         ← Azure Table Storage + rate-limit query
-  Services/EmailNotifier.cs        ← Azure Communication Services email
-  Program.cs                       ← dependency injection & configuration
-  local.settings.sample.json       ← copy to local.settings.json for local runs
-tests/ContactApi.Tests/            ← xUnit tests
-infra/deploy.ps1                   ← creates Azure resources + deploys
-Dockerfile, docker-compose.yml     ← container build + local stack
+ContactApi.slnx                      ← open in Visual Studio
+src/ContactApi.Core/                 ← shared logic (no cloud dependencies)
+src/ContactApi/                      ← Azure Functions host + Table Storage + ACS email
+src/ContactApi.Aws/                  ← AWS Lambda host + DynamoDB + SES
+tests/ContactApi.Tests/              ← xUnit tests
+infra/deploy.ps1                     ← Azure: create resources + deploy
+infra/aws/template.yaml              ← AWS: SAM template (Lambda, Function URL, DynamoDB, IAM)
+infra/aws/deploy-aws.ps1             ← AWS: verify SES email + sam build + sam deploy
+Dockerfile / Dockerfile.aws          ← container builds for each version
+docker-compose.yml                   ← local stack (Azurite, DynamoDB Local, both APIs)
 ```
 
-## Run it locally
+## Run locally
 
-First time only: copy `src/ContactApi/local.settings.sample.json` to `src/ContactApi/local.settings.json`.
-
-### Option 1 — Visual Studio (2022 / 2026)
-1. Open **`ContactApi.slnx`**.
-2. Make sure **ContactApi** is the startup project (right-click → *Set as Startup Project*).
-3. Press **F5**. Visual Studio starts the Azurite storage emulator automatically and runs the API at `http://localhost:7071/api/contact`.
-4. Run tests from **Test → Test Explorer → Run All**.
-
-### Option 2 — Docker (no .NET or Azure tools needed)
+### Docker (easiest — nothing else to install)
 ```bash
-docker compose up --build
+docker compose up --build                    # Azure version  → http://localhost:7071/api/contact
+docker compose --profile aws up --build      # + AWS version  → http://localhost:7072/api/contact
+docker compose --profile aws down            # stop everything
 ```
-Runs the API **and** the Azurite storage emulator. API at `http://localhost:7071/api/contact`. Stop with `docker compose down`.
 
-### Option 3 — Command line
-```bash
-func start --script-root src/ContactApi
-```
-(Needs [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) and Azurite running, e.g. `docker compose up azurite`.)
+### Visual Studio
+- **Azure version:** set **ContactApi** as startup project → **F5** (Visual Studio starts Azurite automatically). First copy `src/ContactApi/local.settings.sample.json` to `local.settings.json`.
+- **AWS version:** start DynamoDB Local (`docker compose --profile aws up -d dynamodb`), set **ContactApi.Aws** as startup project → **F5** → `http://localhost:7072/api/health`.
+- **Tests:** Test → Test Explorer → Run All.
 
 ### Try it
 ```bash
-curl -X POST http://localhost:7071/api/contact -H "Content-Type: application/json" -d "{\"name\":\"Test\",\"email\":\"test@example.com\",\"message\":\"Hello from curl!\"}"
+curl -X POST http://localhost:7072/api/contact -H "Content-Type: application/json" -H "Origin: http://localhost:5510" -d "{\"name\":\"Test\",\"email\":\"test@example.com\",\"message\":\"Hello from curl!\"}"
 ```
 
-## Configuration
+## Deploy
 
-| Setting | Purpose |
-|---|---|
-| `AllowedOrigins` | Comma-separated sites allowed to call the API |
-| `EnableCors` | `true` only when running outside Azure (Docker); Azure handles CORS itself |
-| `MaxMessagesPerHour` | Rate limit per visitor (default 5) |
-| `IpHashSalt` | Random text mixed into IP hashes |
-| `MessagesStorageConnectionString` | Table Storage for messages (empty = don't store) |
-| `CommunicationServicesConnectionString`, `SenderEmail`, `NotifyEmail` | Email delivery (empty = log only) |
-
-## Deploy to Azure
-
+### Azure
 ```powershell
 az login
 ./infra/deploy.ps1 -NotifyEmail you@example.com
 ```
-Creates the resource group, storage, Function App (Flex Consumption), Application Insights and Communication Services Email, sets all settings and CORS, then publishes the code. Re-run any time to redeploy. Delete everything with `az group delete -n rg-portfolio-contact`.
 
-**Cost:** at portfolio traffic this sits inside Azure's free grants (Functions Flex Consumption free executions, Application Insights free data); email is a fraction of a cent per message.
+### AWS
+```powershell
+aws configure            # or: aws login / aws sso login
+./infra/aws/deploy-aws.ps1 -NotifyEmail you@example.com
+```
+The first run sends an **SES verification email** — click the link, then run the script again. New SES accounts are in "sandbox" mode (can only email verified addresses), which is all this API needs since it only emails you.
+
+Then add the printed URLs to `contact.apiUrls` in the website's `js/content.js` — Azure first, AWS second.
+
+## Cost
+
+At portfolio traffic both deployments sit within the providers' free allowances (Azure Functions Flex Consumption, Lambda, DynamoDB on-demand, Application Insights / CloudWatch); email costs a fraction of a cent per message. Remove everything with `az group delete -n rg-portfolio-contact` and `sam delete --stack-name portfolio-contact-api`.

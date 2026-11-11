@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "ContactApi.Aws (local)": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "api/health",
+      "applicationUrl": "http://localhost:7072",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

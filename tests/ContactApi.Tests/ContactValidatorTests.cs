@@ -1,5 +1,5 @@
-using ContactApi.Models;
-using ContactApi.Services;
+using ContactApi.Core.Models;
+using ContactApi.Core;
 
 namespace ContactApi.Tests;
 

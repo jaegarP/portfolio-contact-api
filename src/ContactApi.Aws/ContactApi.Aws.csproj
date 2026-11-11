@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    AWS host for the contact API: an ASP.NET Core minimal API that runs
+      • on AWS Lambda (behind a Lambda Function URL) in the cloud, and
+      • as an ordinary web server locally / in Docker.
+    Database → Amazon DynamoDB      Email → Amazon SES
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ContactApi.Aws</RootNamespace>
+    <AssemblyName>ContactApi.Aws</AssemblyName>
+    <!-- Lambda packaging -->
+    <AWSProjectType>Lambda</AWSProjectType>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ContactApi.Core\ContactApi.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Amazon.Lambda.AspNetCoreServer.Hosting" Version="2.2.1" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.110.3" />
+    <PackageReference Include="AWSSDK.SimpleEmailV2" Version="4.0.106.11" />
+  </ItemGroup>
+
+</Project>

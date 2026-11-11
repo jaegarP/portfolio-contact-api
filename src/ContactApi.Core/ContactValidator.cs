@@ -1,7 +1,7 @@
 using System.Net.Mail;
-using ContactApi.Models;
+using ContactApi.Core.Models;
 
-namespace ContactApi.Services;
+namespace ContactApi.Core;
 
 /// <summary>Checks and cleans a contact-form submission. Pure logic, so it is easy to unit test.</summary>
 public static class ContactValidator

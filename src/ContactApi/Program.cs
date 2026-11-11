@@ -1,9 +1,13 @@
+// ---------------------------------------------------------------
+// Azure host: wires the shared ContactService to Azure services.
+//   Database → Azure Table Storage     Email → Azure Communication Services
+// ---------------------------------------------------------------
 using Azure.Communication.Email;
 using Azure.Data.Tables;
+using ContactApi.Core;
 using ContactApi.Services;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -17,6 +21,10 @@ builder.Services
     .ConfigureFunctionsApplicationInsights();
 
 var config = builder.Configuration;
+
+// ---- Shared logic ----
+builder.Services.AddSingleton(ContactOptions.From(key => config[key]));
+builder.Services.AddSingleton<ContactService>();
 
 // ---- Message storage (Azure Table Storage). Falls back to a no-op store when not configured. ----
 var storageConnection = config["MessagesStorageConnectionString"];

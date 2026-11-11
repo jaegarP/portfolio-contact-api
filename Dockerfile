@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------
-# Contact API — container image
+# Contact API — AZURE version (Azure Functions host) as a container
 # Build:  docker build -t contact-api .
 # Run with local storage: docker compose up --build   (see docker-compose.yml)
 # ---------------------------------------------------------------
@@ -7,8 +7,10 @@
 # 1) Build & publish with the .NET 10 SDK
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
+COPY src/ContactApi.Core/ContactApi.Core.csproj src/ContactApi.Core/
 COPY src/ContactApi/ContactApi.csproj src/ContactApi/
 RUN dotnet restore src/ContactApi/ContactApi.csproj
+COPY src/ContactApi.Core/ src/ContactApi.Core/
 COPY src/ContactApi/ src/ContactApi/
 RUN dotnet publish src/ContactApi/ContactApi.csproj -c Release -o /home/site/wwwroot --no-restore
 

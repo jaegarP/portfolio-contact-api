@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/ContactApi.Aws/ContactApi.Aws.csproj" />
+    <Project Path="src/ContactApi.Core/ContactApi.Core.csproj" />
     <Project Path="src/ContactApi/ContactApi.csproj" />
   </Folder>
   <Folder Name="/tests/">

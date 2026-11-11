@@ -1,0 +1,23 @@
+# ---------------------------------------------------------------
+# Contact API — AWS version (ASP.NET Core minimal API) as a container
+# Run with DynamoDB Local:  docker compose --profile aws up --build   (see docker-compose.yml)
+# (In AWS itself it runs on Lambda, deployed by infra/aws/template.yaml — not from this image.)
+# ---------------------------------------------------------------
+
+# 1) Build & publish with the .NET 10 SDK
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY src/ContactApi.Core/ContactApi.Core.csproj src/ContactApi.Core/
+COPY src/ContactApi.Aws/ContactApi.Aws.csproj src/ContactApi.Aws/
+RUN dotnet restore src/ContactApi.Aws/ContactApi.Aws.csproj
+COPY src/ContactApi.Core/ src/ContactApi.Core/
+COPY src/ContactApi.Aws/ src/ContactApi.Aws/
+RUN dotnet publish src/ContactApi.Aws/ContactApi.Aws.csproj -c Release -o /app --no-restore
+
+# 2) Run on the slim ASP.NET Core runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+WORKDIR /app
+COPY --from=build /app .
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "ContactApi.Aws.dll"]
