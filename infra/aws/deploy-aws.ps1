@@ -18,7 +18,7 @@ param(
   [Parameter(Mandatory)] [string] $NotifyEmail,
   [string] $Region         = "eu-west-1",           # Ireland; change to e.g. eu-west-2 (London) or af-south-1 (Cape Town)
   [string] $StackName      = "portfolio-contact-api",
-  [string] $AllowedOrigins = "https://jaegarp.github.io"
+  [string] $AllowedOrigins = "https://jaegarp.github.io,https://jaegarp.pages.dev"
 )
 
 $ErrorActionPreference = "Continue"   # native tools report via exit codes, checked explicitly below

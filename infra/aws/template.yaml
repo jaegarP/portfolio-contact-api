@@ -15,7 +15,7 @@ Parameters:
     Description: The "From" address. Leave empty to use NotifyEmail (simplest - one verified address).
   AllowedOrigins:
     Type: CommaDelimitedList
-    Default: https://jaegarp.github.io
+    Default: https://jaegarp.github.io,https://jaegarp.pages.dev
     Description: Websites allowed to call the API from a browser.
   IpHashSalt:
     Type: String

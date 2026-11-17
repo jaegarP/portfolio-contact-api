@@ -20,7 +20,7 @@ param(
   [string] $Location       = "southafricanorth",                # Function App + storage region (Johannesburg; westeurope was closed to new customers)
   [string] $DataLocation   = "Europe",                          # Communication Services data residency
   [string] $Prefix         = "jpcontact",                       # used to build globally-unique names
-  [string] $AllowedOrigins = "https://jaegarp.github.io",
+  [string] $AllowedOrigins = "https://jaegarp.github.io,https://jaegarp.pages.dev",
   [switch] $SkipCodeDeploy
 )
 
